@@ -1,6 +1,6 @@
 class AuthApp {
     constructor() {
-        this.apiBase = 'http://localhost:5000/api';
+        this.apiBase = 'https://fantasyfc.onrender.com/api';
         this.token = localStorage.getItem('authToken');
         this.currentUser = null;
 
