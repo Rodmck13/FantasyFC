@@ -14,6 +14,9 @@ app = Flask(__name__,
 app.config.from_object(Config)
 CORS(app, supports_credentials=True)
 
+# Initialize database BEFORE configuring routes
+init_db()
+
 # Configure routes
 configure_auth_routes(app)
 configure_user_routes(app)
@@ -29,5 +32,5 @@ def serve_static(path):
     return app.send_static_file(path)
 
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=True, port=5000)
+    # Don't call init_db() here again - it's already called above
+    app.run(debug=False, host='0.0.0.0', port=5000)  # Changed for production

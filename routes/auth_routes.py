@@ -1,8 +1,7 @@
 from flask import request, jsonify
-from models.user import get_user_by_email, init_db
+from models.user import get_user_by_email, init_db, get_db_connection
 from utils.auth import hash_password, generate_token
-from models.user import get_db_connection
-
+import sqlalchemy as sa
 
 def configure_auth_routes(app):
     @app.route('/api/register', methods=['POST'])
@@ -22,9 +21,11 @@ def configure_auth_routes(app):
             hashed_password = hash_password(password)
 
             conn = get_db_connection()
-            c = conn.cursor()
-            c.execute('INSERT INTO users (email, password, name) VALUES (?, ?, ?)',
-                      (email, hashed_password, name))
+            result = conn.execute(
+                sa.text('INSERT INTO users (email, password, name) VALUES (:email, :password, :name) RETURNING id'),
+                {"email": email, "password": hashed_password, "name": name}
+            )
+            user_id = result.fetchone()[0]
             conn.commit()
             conn.close()
 

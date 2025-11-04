@@ -1,33 +1,33 @@
 from flask import request, jsonify
 from utils.auth import token_required
 from models.user import get_db_connection
-
+import sqlalchemy as sa
 
 def configure_user_routes(app):
     @app.route('/api/profile', methods=['GET'])
     @token_required
     def get_profile(current_user):
         conn = get_db_connection()
-        preferences = conn.execute(
-            'SELECT * FROM user_preferences WHERE user_id = ?',
-            (current_user['id'],)
-        ).fetchone()
+        result = conn.execute(
+            sa.text('SELECT * FROM user_preferences WHERE user_id = :user_id'),
+            {"user_id": current_user['id']}
+        )
+        preferences = result.fetchone()
         conn.close()
 
         return jsonify({
             'user': {
                 'email': current_user['email'],
                 'name': current_user['name'],
-                'preferences': dict(preferences) if preferences else None
+                'preferences': dict(preferences._mapping) if preferences else None
             }
         }), 200
-
 
     @app.route('/api/users/<int:user_id>', methods=['DELETE'])
     def delete_user(user_id):
         """Admin endpoint to delete user"""
         conn = get_db_connection()
-        conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        conn.execute(sa.text('DELETE FROM users WHERE id = :user_id'), {"user_id": user_id})
         conn.commit()
         conn.close()
 
@@ -41,8 +41,10 @@ def configure_user_routes(app):
         name = data.get('name')
 
         conn = get_db_connection()
-        conn.execute('UPDATE users SET email = ?, name = ? WHERE id = ?',
-                     (email, name, user_id))
+        conn.execute(
+            sa.text('UPDATE users SET email = :email, name = :name WHERE id = :user_id'),
+            {"email": email, "name": name, "user_id": user_id}
+        )
         conn.commit()
         conn.close()
 
@@ -55,7 +57,7 @@ def configure_user_routes(app):
         conn = get_db_connection()
 
         # Join users with their preferences and calculate average ratings
-        users = conn.execute('''
+        result = conn.execute(sa.text('''
             SELECT 
                 u.id, u.email, u.name, u.created_at,
                 up.position, up.favorite_team, up.picture, up.slogan,
@@ -64,14 +66,15 @@ def configure_user_routes(app):
             FROM users u
             LEFT JOIN user_preferences up ON u.id = up.user_id
             LEFT JOIN user_ratings ur ON u.id = ur.rated_user_id
-            GROUP BY u.id
-        ''').fetchall()
+            GROUP BY u.id, up.position, up.favorite_team, up.picture, up.slogan
+        '''))
+        users = result.fetchall()
 
         conn.close()
 
         users_list = []
         for user in users:
-            user_data = dict(user)
+            user_data = dict(user._mapping)
             # Add default values if preferences don't exist
             if not user_data['position']:
                 user_data['position'] = 'Not set'
@@ -96,7 +99,8 @@ def configure_user_routes(app):
             conn = get_db_connection()
 
             # Get the single matchday record
-            matchday = conn.execute('SELECT * FROM matchdayInfo LIMIT 1').fetchone()
+            result = conn.execute(sa.text('SELECT * FROM matchdayInfo LIMIT 1'))
+            matchday = result.fetchone()
 
             conn.close()
 
@@ -104,10 +108,10 @@ def configure_user_routes(app):
                 return jsonify({
                     'matchday': {
                         'number': matchday['number'],
-                        'topPlayer': matchday['topPlayer'],
-                        'lastPlayer': matchday['lastPlayer'],
-                        'secondToLast': matchday['secondToLast'],
-                        'noSubs': matchday['noSubs'],
+                        'topPlayer': matchday['topplayer'],  # Note: PostgreSQL converts to lowercase
+                        'lastPlayer': matchday['lastplayer'],
+                        'secondToLast': matchday['secondtolast'],
+                        'noSubs': matchday['nosubs'],
                         'accumulated': matchday['accumulated']
                     }
                 }), 200
@@ -153,38 +157,40 @@ def configure_user_routes(app):
             conn = get_db_connection()
 
             # Check if record exists
-            existing = conn.execute('SELECT id FROM matchdayInfo LIMIT 1').fetchone()
+            result = conn.execute(sa.text('SELECT id FROM matchdayInfo LIMIT 1'))
+            existing = result.fetchone()
 
             if existing:
                 # Update existing record
-                conn.execute('''
+                conn.execute(sa.text('''
                     UPDATE matchdayInfo 
-                    SET number = ?, topPlayer = ?, lastPlayer = ?, secondToLast = ?, 
-                        noSubs = ?, accumulated = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                ''', (
-                    data['number'],
-                    data['topPlayer'],
-                    data['lastPlayer'],
-                    data['secondToLast'],
-                    data['noSubs'],
-                    data['accumulated'],
-                    existing['id']
-                ))
+                    SET number = :number, topPlayer = :topPlayer, lastPlayer = :lastPlayer, 
+                        secondToLast = :secondToLast, noSubs = :noSubs, accumulated = :accumulated, 
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                '''), {
+                    "number": data['number'],
+                    "topPlayer": data['topPlayer'],
+                    "lastPlayer": data['lastPlayer'],
+                    "secondToLast": data['secondToLast'],
+                    "noSubs": data['noSubs'],
+                    "accumulated": data['accumulated'],
+                    "id": existing['id']
+                })
             else:
                 # Insert new record
-                conn.execute('''
+                conn.execute(sa.text('''
                     INSERT INTO matchdayInfo 
                     (number, topPlayer, lastPlayer, secondToLast, noSubs, accumulated)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (
-                    data['number'],
-                    data['topPlayer'],
-                    data['lastPlayer'],
-                    data['secondToLast'],
-                    data['noSubs'],
-                    data['accumulated']
-                ))
+                    VALUES (:number, :topPlayer, :lastPlayer, :secondToLast, :noSubs, :accumulated)
+                '''), {
+                    "number": data['number'],
+                    "topPlayer": data['topPlayer'],
+                    "lastPlayer": data['lastPlayer'],
+                    "secondToLast": data['secondToLast'],
+                    "noSubs": data['noSubs'],
+                    "accumulated": data['accumulated']
+                })
 
             conn.commit()
             conn.close()
@@ -194,4 +200,3 @@ def configure_user_routes(app):
         except Exception as e:
             print(f"Error updating matchday info: {str(e)}")
             return jsonify({'error': 'Failed to update matchday information'}), 500
-

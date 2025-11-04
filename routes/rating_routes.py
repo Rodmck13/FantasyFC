@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from utils.auth import token_required
 from models.user import get_db_connection
-
+import sqlalchemy as sa
 
 def configure_rating_routes(app):
     # Skill definitions by position
@@ -19,21 +19,23 @@ def configure_rating_routes(app):
         conn = get_db_connection()
 
         # Get user's position to determine which skills to show
-        user_prefs = conn.execute(
-            'SELECT position FROM user_preferences WHERE user_id = ?',
-            (user_id,)
-        ).fetchone()
+        result = conn.execute(
+            sa.text('SELECT position FROM user_preferences WHERE user_id = :user_id'),
+            {"user_id": user_id}
+        )
+        user_prefs = result.fetchone()
 
         position = user_prefs['position'] if user_prefs else None
         skills = POSITION_SKILLS.get(position, [])
 
         # Get all ratings for this user
-        ratings = conn.execute('''
+        result = conn.execute(sa.text('''
             SELECT ur.*, u.name as rater_name 
             FROM user_ratings ur 
             JOIN users u ON ur.rater_user_id = u.id 
-            WHERE ur.rated_user_id = ?
-        ''', (user_id,)).fetchall()
+            WHERE ur.rated_user_id = :user_id
+        '''), {"user_id": user_id})
+        ratings = result.fetchall()
 
         conn.close()
 
@@ -43,7 +45,7 @@ def configure_rating_routes(app):
 
         ratings_list = []
         for rating in ratings:
-            rating_dict = dict(rating)
+            rating_dict = dict(rating._mapping)
             ratings_list.append(rating_dict)
             total_score += rating_dict['overall_score']
 
@@ -70,10 +72,11 @@ def configure_rating_routes(app):
 
             # Get the rated user's position
             conn = get_db_connection()
-            user_prefs = conn.execute(
-                'SELECT position FROM user_preferences WHERE user_id = ?',
-                (user_id,)
-            ).fetchone()
+            result = conn.execute(
+                sa.text('SELECT position FROM user_preferences WHERE user_id = :user_id'),
+                {"user_id": user_id}
+            )
+            user_prefs = result.fetchone()
 
             if not user_prefs or not user_prefs['position']:
                 return jsonify({'error': 'User has no position set'}), 400
@@ -98,23 +101,32 @@ def configure_rating_routes(app):
             skill_values = list(skills_data.values())
             overall_score = round(sum(skill_values) / len(skill_values))
 
-            # Insert or update rating
-            c = conn.cursor()
-            c.execute('''
-                INSERT OR REPLACE INTO user_ratings 
+            # Insert or update rating (PostgreSQL uses ON CONFLICT for upsert)
+            conn.execute(sa.text('''
+                INSERT INTO user_ratings 
                 (rated_user_id, rater_user_id, skill_1, skill_2, skill_3, skill_4, skill_5, skill_6, overall_score)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                user_id,
-                current_user['id'],
-                skills_data['skill_1'],
-                skills_data['skill_2'],
-                skills_data['skill_3'],
-                skills_data['skill_4'],
-                skills_data['skill_5'],
-                skills_data['skill_6'],
-                overall_score
-            ))
+                VALUES (:rated_user_id, :rater_user_id, :skill_1, :skill_2, :skill_3, :skill_4, :skill_5, :skill_6, :overall_score)
+                ON CONFLICT (rated_user_id, rater_user_id) 
+                DO UPDATE SET 
+                    skill_1 = EXCLUDED.skill_1,
+                    skill_2 = EXCLUDED.skill_2,
+                    skill_3 = EXCLUDED.skill_3,
+                    skill_4 = EXCLUDED.skill_4,
+                    skill_5 = EXCLUDED.skill_5,
+                    skill_6 = EXCLUDED.skill_6,
+                    overall_score = EXCLUDED.overall_score,
+                    updated_at = CURRENT_TIMESTAMP
+            '''), {
+                "rated_user_id": user_id,
+                "rater_user_id": current_user['id'],
+                "skill_1": skills_data['skill_1'],
+                "skill_2": skills_data['skill_2'],
+                "skill_3": skills_data['skill_3'],
+                "skill_4": skills_data['skill_4'],
+                "skill_5": skills_data['skill_5'],
+                "skill_6": skills_data['skill_6'],
+                "overall_score": overall_score
+            })
 
             conn.commit()
             conn.close()
@@ -134,16 +146,18 @@ def configure_rating_routes(app):
         """Get current user's rating for another user"""
         conn = get_db_connection()
 
-        rating = conn.execute('''
+        result = conn.execute(sa.text('''
             SELECT * FROM user_ratings 
-            WHERE rated_user_id = ? AND rater_user_id = ?
-        ''', (user_id, current_user['id'])).fetchone()
+            WHERE rated_user_id = :rated_user_id AND rater_user_id = :rater_user_id
+        '''), {"rated_user_id": user_id, "rater_user_id": current_user['id']})
+        rating = result.fetchone()
 
         # Get user's position for skill names
-        user_prefs = conn.execute(
-            'SELECT position FROM user_preferences WHERE user_id = ?',
-            (user_id,)
-        ).fetchone()
+        result = conn.execute(
+            sa.text('SELECT position FROM user_preferences WHERE user_id = :user_id'),
+            {"user_id": user_id}
+        )
+        user_prefs = result.fetchone()
 
         position = user_prefs['position'] if user_prefs else None
         skills = POSITION_SKILLS.get(position, [])
@@ -151,7 +165,7 @@ def configure_rating_routes(app):
         conn.close()
 
         if rating:
-            rating_dict = dict(rating)
+            rating_dict = dict(rating._mapping)
             # Add skill names to the response
             rating_dict['skill_names'] = skills
             return jsonify({'rating': rating_dict}), 200
