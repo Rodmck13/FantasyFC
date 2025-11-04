@@ -7,6 +7,7 @@ def init_db():
     conn = get_connection()
 
     try:
+        trans = conn.begin()
         # Users table
         conn.execute(sa.text('''
             CREATE TABLE IF NOT EXISTS users (
@@ -70,12 +71,18 @@ def init_db():
             )
         '''))
 
-        conn.commit()
+        trans.commit()
         print("DEBUG: Database tables created successfully")
 
     except Exception as e:
+
         print(f"ERROR creating tables: {str(e)}")
+
+        if 'trans' in locals():
+            trans.rollback()
+
         raise e
+
     finally:
         conn.close()
 
@@ -163,7 +170,7 @@ def create_user_preferences(user_id, preferences_data):
             })
             print(f"DEBUG: Inserted new preferences for user_id: {user_id}")
 
-        conn.commit()
+
         print(f"DEBUG: Successfully committed preferences for user_id: {user_id}")
 
         # Verify the save worked

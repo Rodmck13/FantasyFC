@@ -28,7 +28,7 @@ def configure_user_routes(app):
         """Admin endpoint to delete user"""
         conn = get_db_connection()
         conn.execute(sa.text('DELETE FROM users WHERE id = :user_id'), {"user_id": user_id})
-        conn.commit()
+
         conn.close()
 
         return jsonify({'message': 'User deleted successfully'}), 200
@@ -45,7 +45,7 @@ def configure_user_routes(app):
             sa.text('UPDATE users SET email = :email, name = :name WHERE id = :user_id'),
             {"email": email, "name": name, "user_id": user_id}
         )
-        conn.commit()
+
         conn.close()
 
         return jsonify({'message': 'User updated successfully'}), 200
@@ -192,7 +192,7 @@ def configure_user_routes(app):
                     "accumulated": data['accumulated']
                 })
 
-            conn.commit()
+
             conn.close()
 
             return jsonify({'message': 'Matchday information updated successfully'}), 200

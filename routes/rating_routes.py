@@ -128,7 +128,7 @@ def configure_rating_routes(app):
                 "overall_score": overall_score
             })
 
-            conn.commit()
+
             conn.close()
 
             return jsonify({

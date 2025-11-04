@@ -26,7 +26,7 @@ def configure_auth_routes(app):
                 {"email": email, "password": hashed_password, "name": name}
             )
             user_id = result.fetchone()[0]
-            conn.commit()
+
             conn.close()
 
             return jsonify({'message': 'User created successfully'}), 201
