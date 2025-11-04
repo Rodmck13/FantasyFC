@@ -6,8 +6,9 @@ class Config:
     JWT_ALGORITHM = 'HS256'
     # Database configuration
     if os.environ.get('DATABASE_URL'):
-        # Production - use PostgreSQL
         DATABASE_URL = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://')
+        DATABASE_PATH = None
     else:
         # Development - use SQLite
         DATABASE_URL = 'sqlite:///users.db'
+        DATABASE_PATH = 'users.db'
