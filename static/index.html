@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy WM</title>
+    <link rel="stylesheet" href="/style.css">
+    
+    <!-- Favicon links -->
+    <link rel="icon" type="image/x-icon" href="resources/football.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="resources/football.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="fresources/football.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="resources/football.png">
+    
+    <!-- Add Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="nav-logo">
+                    <i class="fas fa-futbol"></i> Fantasy WM
+                </h1>
+                <div class="nav-links" id="navLinks">
+                    <span id="userWelcome" class="user-welcome"></span>
+                    <button id="logoutBtn" class="btn btn-secondary" style="display: none;">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Login Form -->
+            <div id="loginSection" class="form-section">
+                <div class="form-container">
+                    <h2>Login</h2>
+                    <form id="loginForm" class="auth-form">
+                        <div class="form-group">
+                            <label for="loginEmail">Email:</label>
+                            <input type="email" id="loginEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Password:</label>
+                            <input type="password" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                    <p>Don't have an account? <a href="#" id="showRegister">Sign up here</a></p>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerSection" class="form-section" style="display: none;">
+                <div class="form-container">
+                    <h2>Create Account</h2>
+                    <form id="registerForm" class="auth-form">
+                        <div class="form-group">
+                            <label for="registerName">Full Name:</label>
+                            <input type="text" id="registerName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="registerEmail">Email:</label>
+                            <input type="email" id="registerEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="registerPassword">Password:</label>
+                            <input type="password" id="registerPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Account</button>
+                    </form>
+                    <p>Already have an account? <a href="#" id="showLogin">Login here</a></p>
+                </div>
+            </div>
+
+            <!-- Lobby (Authenticated Content) -->
+            <div id="lobbySection" class="lobby-section" style="display: none;">
+                <div class="lobby-container">
+                    <!-- Profile Banner -->
+                    <div class="profile-banner" id="profileBanner">
+                        <div class="banner-content">
+                            <div class="banner-avatar">
+                                <img id="bannerAvatar" src="" alt="Profile Avatar">
+                            </div>
+                            <div class="banner-info">
+                                <h1 id="bannerName" class="banner-name">Player Name</h1>
+                                <div class="banner-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-tshirt"></i>
+                                        <span id="bannerPosition">Position</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-users"></i>
+                                        <span id="bannerTeam" class="team-with-icon">
+                                            <span id="teamIcon" class="team-icon"></span>
+                                            <span id="bannerTeamName">Team</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lobby-content">
+                        <!-- Team Performance Section -->
+                        <div class="team-performance-section">
+                            <h3>Team Performance Over Time</h3>
+                            <div class="performance-container">
+                                <div class="performance-gif">
+                                    <img src="/resources/Fantasy-1.gif" alt="Team Performance Over Time">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Add this right after the Team Performance section -->
+                        <!-- Matchday Banner -->
+                        <div class="matchday-banner-section">
+                            <div class="matchday-container">
+                                <div class="matchday-header">
+                                    <h3 class="matchday-title">
+                                        <i class="fas fa-trophy"></i>
+                                        <span id="matchdayNumber">Matchday 1</span>
+                                        <span class="matchday-news">UEFA Gaming matchday summary</span>
+                                    </h3>
+                                    <div class="accumulated-badge" id="accumulatedBadge">
+                                        $230
+                                    </div>
+                                </div>
+
+                                <div class="matchday-content">
+                                    <div class="matchday-grid">
+                                        <!-- Top Performer -->
+                                        <div class="matchday-card top-performer">
+                                            <div class="card-icon">
+                                                <i class="fas fa-crown"></i>
+                                            </div>
+                                            <div class="card-content">
+                                                <h4>Top Player</h4>
+                                                <p class="player-name" id="topPlayer">Jorge</p>
+                                                <span class="card-label">Matchday Champion</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Bottom Performers -->
+                                        <div class="matchday-card bottom-performers">
+                                            <div class="card-icon">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                            </div>
+                                            <div class="card-content">
+                                                <h4>Losers</h4>
+                                                <div class="players-list">
+                                                    <div class="player-item">
+                                                        <span class="player-name" id="lastPlayer">Diego Balacorp</span>
+                                                        <span class="player-rank">Last</span>
+                                                    </div>
+                                                    <div class="player-item">
+                                                        <span class="player-name" id="secondToLast">El Mano
+                                                            Garcia</span>
+                                                        <span class="player-rank">2nd Last</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- No Subs -->
+                                        <div class="matchday-card no-subs">
+                                            <div class="card-icon">
+                                                <i class="fas fa-bed"></i>
+                                            </div>
+                                            <div class="card-content">
+                                                <h4>No substitutions made</h4>
+                                                <p class="player-name" id="noSubsPlayer">Meni</p>
+                                                <span class="card-label">Stayed with last matchday lineup</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Users Grid -->
+                        <div class="users-grid-section">
+                            <h3>Player Squad</h3>
+                            <div class="users-grid" id="usersGrid">
+                                <!-- User cards will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Section -->
+            <div id="adminSection" class="admin-section" style="display: none;">
+                <div class="admin-container">
+                    <h2>User Management</h2>
+                    <div class="users-list" id="usersList">
+                        <!-- Users will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+
+</html>
