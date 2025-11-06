@@ -194,6 +194,7 @@ def are_preferences_complete(user_id):
         return False
 
     # Check if required fields are filled
-    completed = bool(preferences.get('position') and preferences.get('favorite_team'))
+    required_fields = ['position', 'favorite_team', 'picture']
+    completed = all(preferences.get(field) for field in required_fields)
     print(f"DEBUG: Preferences complete: {completed}")
     return completed
