@@ -1,0 +1,10 @@
+curl --location --request PUT 'https://fantasyfc.onrender.com/api/matchday' \
+--header 'Content-Type: application/json' \
+--data '{
+    "number": 12,
+    "topPlayer": "Lionel Messi",
+    "lastPlayer": "Cristiano Ronaldo",
+    "secondToLast": "Neymar Jr",
+    "noSubs": false,
+    "accumulated": 30
+  }'
